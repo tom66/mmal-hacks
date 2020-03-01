@@ -953,7 +953,7 @@ int main(int argc, char** argv) {
 
 	if (argc == 1)
 	{
-		fprintf(stdout, "\n%s Camera App %s\n\n", basename(argv[0]), VERSION_STRING);
+		fprintf(stdout, "\n%s MMAL Hacked Camera App %s (Ignores I2C Errors, Forced Camera Mode)\n\n", basename(argv[0]), VERSION_STRING);
 
 		raspicli_display_help(cmdline_commands, cmdline_commands_size);
 		exit(-1);
@@ -968,17 +968,23 @@ int main(int argc, char** argv) {
 	snprintf(i2c_device_name, sizeof(i2c_device_name), "/dev/i2c-%d", cfg.i2c_bus);
 	printf("Using i2C device %s\n", i2c_device_name);
 
-	sensor = probe_sensor();
+	sensor = &ov5647; // probe_sensor();
+
 	if (!sensor)
 	{
 		vcos_log_error("No sensor found. Aborting");
 		return -1;
 	}
 
+	/*
 	if (cfg.mode >= 0 && cfg.mode < sensor->num_modes)
 	{
 		sensor_mode = &sensor->modes[cfg.mode];
 	}
+	*/
+
+	sensor_mode = &sensor->modes[0];
+	printf("** Sensor Mode: %02x **\n", sensor_mode->image_id);
 
 	if (!sensor_mode)
 	{
