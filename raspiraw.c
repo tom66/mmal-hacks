@@ -209,7 +209,7 @@ int running = 0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
-	printf("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
+	printf("Buffer %p returned, filled %d, timestamp %llu, flags %04X\n", buffer, buffer->length, buffer->pts, buffer->flags);
 	if (running) {
 		RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
 
@@ -227,7 +227,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 				fwrite(buffer->data, buffer->length, 1, file);
 				fclose(file);
 			} else {
-				printf("File write error");
+				printf("File write error\n");
 			}
 			
 			packet_idx++;
@@ -235,7 +235,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 
 		if (cfg->decodemetadata && (buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 		{
-			printf("Got a metadata packet, maybe I shall do something with it sometime");
+			printf("Got a metadata packet, maybe I shall do something with it sometime\n");
 		}
 
 		buffer->length = 0;
@@ -277,7 +277,7 @@ uint32_t order_and_bit_depth_to_encoding(enum bayer_order order, int bit_depth)
 	};
 	if (order < 0 || order > 3)
 	{
-		printf("order out of range - %d", order);
+		printf("order out of range - %d\n", order);
 		return 0;
 	}
 
@@ -292,7 +292,7 @@ uint32_t order_and_bit_depth_to_encoding(enum bayer_order order, int bit_depth)
 		case 16:
 			return depth16[order];
 	}
-	printf("%d not one of the handled bit depths", bit_depth);
+	printf("%d not one of the handled bit depths\n", bit_depth);
 	return 0;
 }
 
@@ -324,7 +324,7 @@ int main(int argc, char** argv)
 	printf("** Sensor Mode: %02x **\n", sensor_mode->image_id);
 
 	cfg.bit_depth = sensor_mode->native_bit_depth;
-
+	
 	encoding = order_and_bit_depth_to_encoding(sensor_mode->order, cfg.bit_depth);
 	
 	if (!encoding)
@@ -333,7 +333,7 @@ int main(int argc, char** argv)
 		return -3;
 	}
 	
-	printf("Encoding %08X", encoding);
+	printf("Encoding %08X\n", encoding);
 
 	bcm_host_init(); // is this needed 2x?
 	vcos_log_register("RaspiRaw", VCOS_LOG_CATEGORY);
@@ -341,21 +341,21 @@ int main(int argc, char** argv)
 	status = mmal_component_create("vc.ril.rawcam", &rawcam);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to create rawcam");
+		printf("Failed to create rawcam\n");
 		return -1;
 	}
 
 	status = mmal_component_create("vc.ril.isp", &isp);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to create isp");
+		printf("Failed to create isp\n");
 		goto component_destroy;
 	}
 
 	status = mmal_component_create(MMAL_COMPONENT_DEFAULT_VIDEO_RENDERER, &render);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to create render");
+		printf("Failed to create render\n");
 		goto component_destroy;
 	}
 
@@ -366,7 +366,7 @@ int main(int argc, char** argv)
 	status = mmal_port_parameter_get(output, &rx_cfg.hdr);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to get cfg");
+		printf("Failed to get cfg\n");
 		goto component_destroy;
 	}
 	if (sensor_mode->encoding || cfg.bit_depth == sensor_mode->native_bit_depth)
@@ -394,7 +394,7 @@ int main(int argc, char** argv)
 				rx_cfg.unpack = MMAL_CAMERA_RX_CONFIG_UNPACK_16;
 				break;
 			default:
-				printf("Unknown native bit depth %d", sensor_mode->native_bit_depth);
+				printf("Unknown native bit depth %d\n", sensor_mode->native_bit_depth);
 				rx_cfg.unpack = MMAL_CAMERA_RX_CONFIG_UNPACK_NONE;
 				break;
 		}
@@ -416,12 +416,12 @@ int main(int argc, char** argv)
 				rx_cfg.pack = MMAL_CAMERA_RX_CONFIG_PACK_16;
 				break;
 			default:
-				printf("Unknown output bit depth %d", cfg.bit_depth);
+				printf("Unknown output bit depth %d\n", cfg.bit_depth);
 				rx_cfg.pack = MMAL_CAMERA_RX_CONFIG_UNPACK_NONE;
 				break;
 		}
 	}
-	printf("Set pack to %d, unpack to %d", rx_cfg.unpack, rx_cfg.pack);
+	printf("Set pack to %d, unpack to %d\n", rx_cfg.unpack, rx_cfg.pack);
 	if (sensor_mode->data_lanes)
 		rx_cfg.data_lanes = sensor_mode->data_lanes;
 	if (sensor_mode->image_id)
@@ -429,7 +429,7 @@ int main(int argc, char** argv)
 	status = mmal_port_parameter_set(output, &rx_cfg.hdr);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to set cfg");
+		printf("Failed to set cfg\n");
 		goto component_destroy;
 	}
 
@@ -438,7 +438,7 @@ int main(int argc, char** argv)
 	status = mmal_port_parameter_get(output, &rx_timing.hdr);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to get timing");
+		printf("Failed to get timing\n");
 		goto component_destroy;
 	}
 	if (sensor_mode->timing[0])
@@ -462,7 +462,7 @@ int main(int argc, char** argv)
 	status = mmal_port_parameter_set(output, &rx_timing.hdr);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to set timing");
+		printf("Failed to set timing\n");
 		goto component_destroy;
 	}
 
@@ -471,7 +471,7 @@ int main(int argc, char** argv)
 		status = mmal_port_parameter_set_int32(output, MMAL_PARAMETER_CAMERA_NUM, cfg.camera_num);
 		if (status != MMAL_SUCCESS)
 		{
-			printf("Failed to set camera_num");
+			printf("Failed to set camera_num\n");
 			goto component_destroy;
 		}
 	}
@@ -479,19 +479,19 @@ int main(int argc, char** argv)
 	status = mmal_component_enable(rawcam);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to enable rawcam");
+		printf("Failed to enable rawcam\n");
 		goto component_destroy;
 	}
 	status = mmal_component_enable(isp);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to enable isp");
+		printf("Failed to enable isp\n");
 		goto component_destroy;
 	}
 	status = mmal_component_enable(render);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to enable render");
+		printf("Failed to enable render\n");
 		goto component_destroy;
 	}
 
@@ -504,7 +504,7 @@ int main(int argc, char** argv)
 	status = mmal_port_format_commit(output);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed port_format_commit");
+		printf("Failed port_format_commit\n");
 		goto component_disable;
 	}
 
@@ -514,7 +514,7 @@ int main(int argc, char** argv)
 	status = mmal_port_parameter_set_boolean(output, MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to set zero copy");
+		printf("Failed to set zero copy\n");
 		goto component_disable;
 	}
 
@@ -522,7 +522,7 @@ int main(int argc, char** argv)
 	pool = mmal_port_pool_create(output, output->buffer_num, output->buffer_size);
 	if (!pool)
 	{
-		printf("Failed to create pool");
+		printf("Failed to create pool\n");
 		goto component_disable;
 	}
 
@@ -530,7 +530,7 @@ int main(int argc, char** argv)
 	status = mmal_port_enable(output, callback);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to enable port");
+		printf("Failed to enable port\n");
 		goto pool_destroy;
 	}
 	running = 1;
@@ -540,16 +540,16 @@ int main(int argc, char** argv)
 
 		if (!buffer)
 		{
-			printf("Where'd my buffer go?!");
+			printf("Where'd my buffer go?!\n");
 			goto port_disable;
 		}
 		status = mmal_port_send_buffer(output, buffer);
 		if (status != MMAL_SUCCESS)
 		{
-			printf("mmal_port_send_buffer failed on buffer %p, status %d", buffer, status);
+			printf("mmal_port_send_buffer failed on buffer %p, status %d\n", buffer, status);
 			goto port_disable;
 		}
-		printf("Sent buffer %p", buffer);
+		printf("Sent buffer %p\n", buffer);
 	}
 		
 	start_camera_streaming(sensor, sensor_mode);
@@ -565,7 +565,7 @@ port_disable:
 		status = mmal_port_disable(output);
 		if (status != MMAL_SUCCESS)
 		{
-			printf("Failed to disable port");
+			printf("Failed to disable port\n");
 			return -1;
 		}
 	}
@@ -588,17 +588,17 @@ component_disable:
 	status = mmal_component_disable(render);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to disable render");
+		printf("Failed to disable render\n");
 	}
 	status = mmal_component_disable(isp);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to disable isp");
+		printf("Failed to disable isp\n");
 	}
 	status = mmal_component_disable(rawcam);
 	if (status != MMAL_SUCCESS)
 	{
-		printf("Failed to disable rawcam");
+		printf("Failed to disable rawcam\n");
 	}
 component_destroy:
 	if (rawcam)
