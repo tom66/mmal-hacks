@@ -455,7 +455,7 @@ int main(int argc, char** argv)
 		rx_timing.term1 = sensor_mode->term[0];
 	if (sensor_mode->term[1])
 		rx_timing.term2 = sensor_mode->term[1];
-	printf("Timing %u/%u, %u/%u/%u, %u/%u",
+	printf("Timing %u/%u, %u/%u/%u, %u/%u\n",
 		rx_timing.timing1, rx_timing.timing2,
 		rx_timing.timing3, rx_timing.timing4, rx_timing.timing5,
 		rx_timing.term1,  rx_timing.term2);
@@ -467,7 +467,7 @@ int main(int argc, char** argv)
 	}
 
 	if (cfg.camera_num != -1) {
-		printf("Set camera_num to %d", cfg.camera_num);
+		printf("Set camera_num to %d\n", cfg.camera_num);
 		status = mmal_port_parameter_set_int32(output, MMAL_PARAMETER_CAMERA_NUM, cfg.camera_num);
 		if (status != MMAL_SUCCESS)
 		{
@@ -518,7 +518,7 @@ int main(int argc, char** argv)
 		goto component_disable;
 	}
 
-	printf("Create pool of %d buffers of size %d", output->buffer_num, output->buffer_size);
+	printf("Create pool of %d buffers of size %d\n", output->buffer_num, output->buffer_size);
 	pool = mmal_port_pool_create(output, output->buffer_num, output->buffer_size);
 	if (!pool)
 	{
