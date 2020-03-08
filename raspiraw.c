@@ -173,10 +173,9 @@ typedef struct {
         int decodemetadata;
 } RASPIRAW_PARAMS_T;
 
+// this literally does nothing useful
 void start_camera_streaming(const struct sensor_def *sensor, struct mode_def *mode)
 {
-	int fd;
-
 	vcos_log_error("Now streaming...");
 }
 
@@ -186,51 +185,16 @@ void stop_camera_streaming(const struct sensor_def *sensor)
 	fd = open(i2c_device_name, O_RDWR);
 	if (!fd)
 	{
-		vcos_log_error("Couldn't open I2C device");
+		fprintf(stdout, "Couldn't open I2C device");
 		return;
 	}
 	if (ioctl(fd, I2C_SLAVE_FORCE, sensor->i2c_addr) < 0)
 	{
-		vcos_log_error("Failed to set I2C address");
+		fprintf(stdout, "Failed to set I2C address");
 		return;
 	}
 	send_regs(fd, sensor, sensor->stop, sensor->num_stop_regs);
 	close(fd);
-}
-
-void decodemetadataline(uint8_t *data, int bpp)
-{
-	int c=1;
-	uint8_t tag,dta;
-	uint16_t reg=-1;
-
-	if (data[0]==0x0a)
-	{
-
-		while (data[c]!=0x07)
-		{
-			tag=data[c++];
-			if (bpp==10 && (c%5)==4)
-				c++;
-			if (bpp==12 && (c%3)==2)
-				c++;
-			dta=data[c++];
-
-			if (tag==0xaa)
-				reg=(reg&0x00ff)|(dta<<8);
-			else if (tag==0xa5)
-				reg=(reg&0xff00)|dta;
-			else if (tag==0x5a)
-				vcos_log_error("Register 0x%04x = 0x%02x",reg++,dta);
-			else if (tag==0x55)
-				vcos_log_error("Skip     0x%04x",reg++);
-			else
-				vcos_log_error("Metadata decode failed %x %x %x",reg,tag,dta);
-		}
-	}
-	else
-		vcos_log_error("Doesn't looks like register set %x!=0x0a",data[0]);
-
 }
 
 int encoding_to_bpp(uint32_t encoding)
@@ -268,7 +232,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 			FILE *file;
 			char filename[16];
 			
-			sprintf(&filename, "rxtest/rxpkt_%04d.bin", packet_idx)
+			sprintf(&filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 			
 			file = fopen(filename, "wb");
 			if(file) {
@@ -277,16 +241,13 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 			} else {
 				fprintf(stdout, "File write error");
 			}
-			free(filename);
+			
+			packet_idx++;
 		}
 
 		if (cfg->decodemetadata && (buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 		{
-			int bpp = encoding_to_bpp(port->format->encoding);
-			vcos_log_error("First metadata line");
-			decodemetadataline(buffer->data, bpp);
-			vcos_log_error("Second metadata line");
-			decodemetadataline(buffer->data+VCOS_ALIGN_UP(5*(port->format->es->video.width/4),16), bpp);
+			fprintf(stdout, "Got a metadata packet, maybe I shall do something with it sometime");
 		}
 
 		buffer->length = 0;
@@ -660,39 +621,6 @@ component_destroy:
 		mmal_component_destroy(isp);
 	if (render)
 		mmal_component_destroy(render);
-
-	if (cfg.write_timestamps)
-	{
-		// Save timestamps
-		FILE *file;
-		file = fopen(cfg.write_timestamps, "wb");
-		if (file)
-		{
-			int64_t old = 0;
-			PTS_NODE_T aux;
-			for(aux = cfg.ptsa; aux != cfg.ptso; aux = aux->nxt)
-			{
-				if (aux == cfg.ptsa)
-				{
-					fprintf(file, ",%d,%lld\n", aux->idx, aux->pts);
-				}
-				else
-				{
-					fprintf(file, "%lld,%d,%lld\n", aux->pts-old, aux->idx, aux->pts);
-				}
-				old = aux->pts;
-			}
-			fclose(file);
-		}
-
-		while (cfg.ptsa != cfg.ptso)
-		{
-			PTS_NODE_T aux = cfg.ptsa->nxt;
-			free(cfg.ptsa);
-			cfg.ptsa = aux;
-		}
-		free(cfg.ptso);
-	}
 
 	return 0;
 }
