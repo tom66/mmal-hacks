@@ -179,22 +179,10 @@ void start_camera_streaming(const struct sensor_def *sensor, struct mode_def *mo
 	vcos_log_error("Now streaming...");
 }
 
+// this too does nothing useful
 void stop_camera_streaming(const struct sensor_def *sensor)
 {
-	int fd;
-	fd = open(i2c_device_name, O_RDWR);
-	if (!fd)
-	{
-		fprintf(stdout, "Couldn't open I2C device");
-		return;
-	}
-	if (ioctl(fd, I2C_SLAVE_FORCE, sensor->i2c_addr) < 0)
-	{
-		fprintf(stdout, "Failed to set I2C address");
-		return;
-	}
-	send_regs(fd, sensor, sensor->stop, sensor->num_stop_regs);
-	close(fd);
+	vcos_log_error("...and we're out");
 }
 
 int encoding_to_bpp(uint32_t encoding)
@@ -337,8 +325,6 @@ int main(int argc, char** argv)
 
 	cfg.bit_depth = sensor_mode->native_bit_depth;
 
-	update_regs(sensor, sensor_mode, cfg.hflip, cfg.vflip, cfg.exposure, cfg.gain);
-	
 	encoding = order_and_bit_depth_to_encoding(sensor_mode->order, cfg.bit_depth);
 	
 	if (!encoding)
