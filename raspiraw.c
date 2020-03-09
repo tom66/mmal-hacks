@@ -229,7 +229,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 			fwrite(buffer->data, buffer->length, 1, file);
 			printf("Closing file...\n");
 			fclose(file);
-			printf("Done");
+			printf("Done\n");
 		} else {
 			printf("File write error\n");
 		}
@@ -242,9 +242,10 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		printf("Got a metadata packet, maybe I shall do something with it sometime\n");
 	}
 
-	printf("end of callback...\n");
+	printf("end of BufferTest...\n");
 	buffer->length = 0;
 	mmal_port_send_buffer(port, buffer);
+	printf("end of callback...\n");
 }
 
 uint32_t order_and_bit_depth_to_encoding(enum bayer_order order, int bit_depth)
