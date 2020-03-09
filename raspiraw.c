@@ -209,7 +209,7 @@ int running = 0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
-	printf("Buffer %p returned, filled %d, timestamp %llu, flags %04X\n", buffer, buffer->length, buffer->pts, buffer->flags);
+	printf("Buffer %p returned, data %p, filled %d, timestamp %llu, flags %04X\n", buffer, buffer->data, buffer->length, buffer->pts, buffer->flags);
 
 	RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
 
@@ -225,8 +225,11 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		
 		file = fopen(filename, "wb");
 		if(file) {
+			printf("Writing file...\n");
 			fwrite(buffer->data, buffer->length, 1, file);
+			printf("Closing file...\n");
 			fclose(file);
+			printf("Done");
 		} else {
 			printf("File write error\n");
 		}
@@ -239,6 +242,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		printf("Got a metadata packet, maybe I shall do something with it sometime\n");
 	}
 
+	printf("end of callback...\n");
 	buffer->length = 0;
 	mmal_port_send_buffer(port, buffer);
 }
