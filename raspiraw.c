@@ -210,39 +210,36 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
 	printf("Buffer %p returned, filled %d, timestamp %llu, flags %04X\n", buffer, buffer->length, buffer->pts, buffer->flags);
-	if (running) {
-		RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
 
-		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
-		{
-			// Save every Nth frame
-			// SD card access is too slow to do much more.
-			FILE *file;
-			char filename[16];
-			
-			sprintf(&filename, "rxtest/rxpkt_%04d.bin", packet_idx);
-			
-			file = fopen(filename, "wb");
-			if(file) {
-				fwrite(buffer->data, buffer->length, 1, file);
-				fclose(file);
-			} else {
-				printf("File write error\n");
-			}
-			
-			packet_idx++;
+	RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
+
+	if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
+	{
+		// Save every Nth frame
+		// SD card access is too slow to do much more.
+		FILE *file;
+		char filename[16];
+		
+		sprintf(&filename, "rxtest/rxpkt_%04d.bin", packet_idx);
+		
+		file = fopen(filename, "wb");
+		if(file) {
+			fwrite(buffer->data, buffer->length, 1, file);
+			fclose(file);
+		} else {
+			printf("File write error\n");
 		}
-
-		if (cfg->decodemetadata && (buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
-		{
-			printf("Got a metadata packet, maybe I shall do something with it sometime\n");
-		}
-
-		buffer->length = 0;
-		mmal_port_send_buffer(port, buffer);
-	} else {
-		mmal_buffer_header_release(buffer);
+		
+		packet_idx++;
 	}
+
+	if (cfg->decodemetadata && (buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
+	{
+		printf("Got a metadata packet, maybe I shall do something with it sometime\n");
+	}
+
+	buffer->length = 0;
+	mmal_port_send_buffer(port, buffer);
 }
 
 uint32_t order_and_bit_depth_to_encoding(enum bayer_order order, int bit_depth)
@@ -303,6 +300,7 @@ int main(int argc, char** argv)
 	const struct sensor_def *sensor;
 	struct mode_def *sensor_mode = NULL;
 	unsigned int i;
+	unsigned int camera_num = 1;
 
 	MMAL_COMPONENT_T *rawcam=NULL, *isp=NULL, *render=NULL;
 	MMAL_STATUS_T status;
@@ -324,7 +322,6 @@ int main(int argc, char** argv)
 	printf("** Sensor Mode: %02x **\n", sensor_mode->image_id);
 
 	cfg.bit_depth = sensor_mode->native_bit_depth;
-	
 	encoding = order_and_bit_depth_to_encoding(sensor_mode->order, cfg.bit_depth);
 	
 	if (!encoding)
@@ -466,16 +463,15 @@ int main(int argc, char** argv)
 		goto component_destroy;
 	}
 
-	if (cfg.camera_num != -1) {
-		printf("Set camera_num to %d\n", cfg.camera_num);
-		status = mmal_port_parameter_set_int32(output, MMAL_PARAMETER_CAMERA_NUM, cfg.camera_num);
-		if (status != MMAL_SUCCESS)
-		{
-			printf("Failed to set camera_num\n");
-			goto component_destroy;
-		}
+	printf("Set camera_num to %d\n", camera_num);
+	status = mmal_port_parameter_set_int32(output, MMAL_PARAMETER_CAMERA_NUM, camera_num);
+	
+	if (status != MMAL_SUCCESS)
+	{
+		printf("Failed to set camera_num\n");
+		goto component_destroy;
 	}
-
+	
 	status = mmal_component_enable(rawcam);
 	if (status != MMAL_SUCCESS)
 	{
