@@ -221,6 +221,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		char filename[16];
 		
 		sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
+		printf("Filename: %s\n", filename");
 		
 		file = fopen(filename, "wb");
 		if(file) {
