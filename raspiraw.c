@@ -206,28 +206,29 @@ int encoding_to_bpp(uint32_t encoding)
 }
 
 int running = 0;
+
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
 	printf("Buffer %p returned, data %p, filled %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->pts, buffer->flags, running);
 
+	FILE *file;
+	char filename[16];
+		
 	//RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
 
-#if 11
+#if 1
 	if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 	{
-		FILE *file;
-		char filename[16];
-		
 		sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		printf("Filename: %s\n", filename);
 		
-		file = fopen(filename, "wb");
+		//file = fopen(filename, "wb");
 		if(file) {
 			printf("Writing file...\n");
 			//fwrite(buffer->data, buffer->length, 1, file);
 			printf("Closing file...\n");
-			fclose(file);
+			//fclose(file);
 			printf("Done\n");
 		} else {
 			printf("File write error\n");
@@ -236,10 +237,12 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		packet_idx++;
 	}
 
+	/*
 	if ((buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 	{
 		printf("Got a metadata packet, maybe I shall do something with it sometime\n");
 	}
+	*/
 #endif
 
 	printf("end of BufferTest...\n");
