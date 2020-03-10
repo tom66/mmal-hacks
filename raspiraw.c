@@ -220,7 +220,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 #if 1
 	if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 	{
-		sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
+		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		printf("Filename: %s\n", filename);
 		
 		//file = fopen(filename, "wb");
