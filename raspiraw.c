@@ -176,13 +176,13 @@ typedef struct {
 // this literally does nothing useful
 void start_camera_streaming(const struct sensor_def *sensor, struct mode_def *mode)
 {
-	printf("Now streaming...");
+	printf("Now streaming...\n");
 }
 
 // this too does nothing useful
 void stop_camera_streaming(const struct sensor_def *sensor)
 {
-	printf("...and we're out");
+	printf("...and we're out\n");
 }
 
 int encoding_to_bpp(uint32_t encoding)
@@ -244,6 +244,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 
 	printf("end of BufferTest...\n");
 	buffer->length = 0;
+	mmal_buffer_header_release(buffer);
 	mmal_port_send_buffer(port, buffer);
 	printf("end of callback...\n");
 }
