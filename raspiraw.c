@@ -211,7 +211,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	static int count = 0;
 	printf("Buffer %p returned, data %p, filled %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->pts, buffer->flags, running);
 
-	RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
+	//RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
 
 #if 11
 	if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
@@ -236,7 +236,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		packet_idx++;
 	}
 
-	if (cfg->decodemetadata && (buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
+	if ((buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 	{
 		printf("Got a metadata packet, maybe I shall do something with it sometime\n");
 	}
