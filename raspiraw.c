@@ -209,14 +209,12 @@ int running = 0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
-	printf("Buffer %p returned, data %p, filled %d, timestamp %llu, flags %04X\n", buffer, buffer->data, buffer->length, buffer->pts, buffer->flags);
+	printf("Buffer %p returned, data %p, filled %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->pts, buffer->flags, running);
 
 	RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
 
 	if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 	{
-		// Save every Nth frame
-		// SD card access is too slow to do much more.
 		FILE *file;
 		char filename[16];
 		
@@ -430,6 +428,9 @@ int main(int argc, char** argv)
 		rx_cfg.data_lanes = sensor_mode->data_lanes;
 	if (sensor_mode->image_id)
 		rx_cfg.image_id = sensor_mode->image_id;
+	
+	printf("Set data_lanes to %d, image_id to 0x%02x\n", rx_cfg.data_lanes, rx_cfg.image_id);
+	
 	status = mmal_port_parameter_set(output, &rx_cfg.hdr);
 	if (status != MMAL_SUCCESS)
 	{
@@ -439,6 +440,7 @@ int main(int argc, char** argv)
 
 	rx_timing.hdr.id = MMAL_PARAMETER_CAMERA_RX_TIMING;
 	rx_timing.hdr.size = sizeof(rx_timing);
+	
 	status = mmal_port_parameter_get(output, &rx_timing.hdr);
 	if (status != MMAL_SUCCESS)
 	{
