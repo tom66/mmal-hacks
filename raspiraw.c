@@ -327,27 +327,11 @@ int init_resources()
 		return 0;
 	}
 
-	// Create our datapoints, store it as bytes
-	bool positive = false;
-	int x=0;
-	for (int j = 0; j < NWAVES; j++) {
-		for (int i = 0; ; i++, x++) {
-			float y = sin(x/100.0) * (sin(x/10003.0)*.4+.5);
-			//float y = sin(x * 10.0) / (1.0 + x * x);
-			if (i < NPOINTS) {
-				graph[i/TEXSIZE][(i%TEXSIZE) + j*TEXSIZE] = roundf(y * 128 + 128);
-			} else {
-				if (positive && y<=0)
-					break; // retrig on falling edge
-			}
-			positive = (y > 0);
-		}
-	}
-
 	/* Upload the texture with our datapoints */
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &cam_ytex);
 	glGenTextures(NTEXTURES, texture_id);
+
 	for (int i=0; i<NTEXTURES; i++) {
 		printf("texture %d has id %d\n", i, texture_id[i]);
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
@@ -419,22 +403,24 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	int i = 0;
 	int w = 0;
 
-	for (int i=0; i < NTEXTURES; i++) {
-		//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
-		void *ptr = (int8_t *)(buf->data + (i * (TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2)));
-		
-		// WAVE_SIZE
-		
-		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
+	//for (int w=0; w < NWAVES; w++) {
+		for (int i=0; i < NTEXTURES; i++) {
+			//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
+			void *ptr = (int8_t *)(buf->data + (i * TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2)));
+			
+			// WAVE_SIZE
+			
+			glBindTexture(GL_TEXTURE_2D, texture_id[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
 
-		/* Set texture wrapping mode */
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+			/* Set texture wrapping mode */
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 
-		/* Set texture interpolation mode */
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
-	}
+			/* Set texture interpolation mode */
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
+		}
+	//}
 #endif
 }
 
