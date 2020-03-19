@@ -549,7 +549,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 			
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		shared_buf = *buffer;
-		printf ("shared_buf: %p -> %p %d\n", &shared_buf, shared_buf.data, shared_buf.length);
+		//printf ("shared_buf: %p -> %p %d\n", &shared_buf, shared_buf.data, shared_buf.length);
 		got_frame = 1;
 		vcos_mutex_unlock(&mutex);
 			
@@ -564,11 +564,11 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	*/
 #endif
 
-	printf("end of BufferTest...\n");
+	//printf("end of BufferTest...\n");
 	buffer->length = 0;
 	mmal_buffer_header_release(buffer);
 	mmal_port_send_buffer(port, buffer);
-	printf("end of callback...\n");
+	//printf("end of callback...\n");
 }
 
 uint32_t order_and_bit_depth_to_encoding(enum bayer_order order, int bit_depth)
