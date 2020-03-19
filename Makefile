@@ -8,7 +8,7 @@ CPPFLAGS=-g -O1
 
 all: raspiraw
 
-raspiraw: raspiraw.o RaspiCLI.o
+raspiraw: raspiraw.o shader_utils.o 
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
