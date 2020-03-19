@@ -257,7 +257,7 @@ int initgraph()
 		return 1;
 	}
 		
- 	if (!(win=glfwCreateWindow(1280, 1024, "OscilloTest", NULL, NULL))) {
+ 	if (!(win=glfwCreateWindow(1280, 768, "OscilloTest", NULL, NULL))) {
 		fprintf(stderr, "window create failed\n");
 		return 1;
 	}
