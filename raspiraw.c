@@ -327,23 +327,6 @@ int init_resources()
 		return 0;
 	}
 
-	// Create our datapoints, store it as bytes
-	bool positive = false;
-	int x=0;
-	for (int j = 0; j < NWAVES; j++) {
-		for (int i = 0; ; i++, x++) {
-			float y = sin(x/100.0) * (sin(x/10003.0)*.4+.5);
-			//float y = sin(x * 10.0) / (1.0 + x * x);
-			if (i < NPOINTS) {
-				graph[i/TEXSIZE][(i%TEXSIZE) + j*TEXSIZE] = roundf(y * 128 + 128);
-			} else {
-				if (positive && y<=0)
-					break; // retrig on falling edge
-			}
-			positive = (y > 0);
-		}
-	}
-
 	/* Upload the texture with our datapoints */
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &cam_ytex);
@@ -421,7 +404,7 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 
 	for (int i=0; i < NTEXTURES; i++) {
 		//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
-		void *ptr = (int8_t *)((buf->data + (i * (TEXSIZE - 20)) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2)));
+		void *ptr = (int8_t *)((buf->data + (i * (EXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2)));
 		
 		// WAVE_SIZE
 		
