@@ -99,7 +99,7 @@ GLint uniform_xtile;
 GLint uniform_color;
 
 bool interpolate = false;
-bool clamp = false;
+bool clamp = true;
 bool showpoints = false;
 
 #define WAVE_SIZE 		16384				// How big each acquisition is
