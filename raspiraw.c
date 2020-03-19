@@ -331,9 +331,9 @@ int init_resources()
 	glActiveTexture(GL_TEXTURE0);
 	
 	glGenTextures(1, &cam_ytex);
-	glGenTextures(NWAVES, texture_id);
+	glGenTextures(NWAVES * NTEXTURES, texture_id);
 
-	for (int i=0; i<NWAVES; i++) {
+	for (int i=0; i < (NWAVES * NTEXTURES); i++) {
 		printf("texture %d has id %d\n", i, texture_id[i]);
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_BYTE, graph[0]);
@@ -411,7 +411,7 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 			
 			// WAVE_SIZE
 			
-			glBindTexture(GL_TEXTURE_2D, texture_id[i]);
+			glBindTexture(GL_TEXTURE_2D, texture_id[i + (w * NTEXTURES)]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
 
 			/* Set texture wrapping mode */
@@ -498,9 +498,8 @@ void graph_display()
 	float scale = 16./NWAVES/2;
 	for (int j=0; j<NTEXTURES; j++) {
 		//int j=1;
-		glBindTexture(GL_TEXTURE_2D, texture_id[j]);
-		
 		for (int i=0; i<NWAVES; i++) {
+			glBindTexture(GL_TEXTURE_2D, texture_id[(i * NTEXTURES) + j]);
 			glUniform1f(uniform_wavenum, (2*i+1.0)/(2*NWAVES));
 			//glUniform1f(uniform_offset_x, offset_x);
 			//glUniform1f(uniform_scale_x, scale_x);
@@ -515,6 +514,7 @@ void graph_display()
 		}
 		//		glutSwapBuffers();	usleep(50000);
 	}
+	
 	assert(!glGetError());
 	glfwSwapBuffers(win);
 	//glutSwapBuffers();
