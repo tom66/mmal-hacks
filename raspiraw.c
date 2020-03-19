@@ -103,8 +103,8 @@ bool clamp = false;
 bool showpoints = false;
 
 #define NPOINTS 262144
-#define TEXSIZE 2048
-#define NTEXTURES 1
+#define TEXSIZE 1024
+#define NTEXTURES (NPOINTS/TEXSIZE)
 #define NWAVES 1
 
 GLuint vbo;
@@ -347,12 +347,10 @@ int init_resources()
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &cam_ytex);
 	glGenTextures(NTEXTURES, texture_id);
-	
 	for (int i=0; i<NTEXTURES; i++) {
 		printf("texture %d has id %d\n", i, texture_id[i]);
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph[i]);
-		
 		/* Set texture wrapping mode */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		
@@ -415,10 +413,10 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	int i=0;
 
 	for (int i=0; i<NTEXTURES; i++) {
-		void *ptr = (uint8_t *)buf->data + (262144 / 2) - 1024; // + i * TEXSIZE * NWAVES;
+		void *ptr = (uint8_t *)buf->data + (262144 / 2) - 2048; // + i * TEXSIZE * NWAVES;
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_SHORT, ptr);
-		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_SHORT, ptr);
+
 		/* Set texture wrapping mode */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 
