@@ -102,10 +102,11 @@ bool interpolate = false;
 bool clamp = false;
 bool showpoints = false;
 
-#define NPOINTS 2048
-#define TEXSIZE 1024
-#define NTEXTURES (NPOINTS/TEXSIZE)
-#define NWAVES 70
+#define WAVE_SIZE 		16384				// How big each acquisition is
+#define NPOINTS 		2048				// How many points to render
+#define TEXSIZE 		1024				// Size of the textures
+#define NTEXTURES 		(NPOINTS/TEXSIZE)	// Number of textures
+#define NWAVES 			16					// Number of waves to render per frame
 
 GLuint vbo;
 GLbyte graph[NTEXTURES][TEXSIZE * NWAVES];
@@ -417,8 +418,11 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 #else
 	int i=0;
 
-	for (int i=0; i<NTEXTURES; i++) {
-		void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
+	for (int i=0; i < NTEXTURES; i++) {
+		//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
+		void *ptr = (int8_t *)((buf->data + (WAVE_SIZE * i) - (WAVE_SIZE / 2));
+		
+		// WAVE_SIZE
 		
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
