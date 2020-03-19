@@ -85,8 +85,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 int packet_idx = 0;
 
-static char i2c_device_name[I2C_DEVICE_NAME_LEN];
-
 struct brcm_raw_header *brcm_header = NULL;
 
 GLuint program;
@@ -128,6 +126,9 @@ GLFWwindow* win;
 MMAL_BUFFER_HEADER_T shared_buf;
 bool_t got_frame = 0, aborted = 0;
 VCOS_MUTEX_T mutex;
+
+static unsigned int fps_frames = 0;
+static struct timeval fps_start = {0,0};
 
 enum bayer_order {
 	//Carefully ordered so that an hflip is ^1,
