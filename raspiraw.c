@@ -534,7 +534,7 @@ int running = 0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
-	printf("Buffer %p returned, data %p, filled %d, offset %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->offset, buffer->pts, buffer->flags, running);
+	//printf("Buffer %p returned, data %p, filled %d, offset %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->offset, buffer->pts, buffer->flags, running);
 
 	FILE *file;
 	char filename[32];
@@ -636,6 +636,7 @@ int main(int argc, char** argv)
 	struct mode_def *sensor_mode = NULL;
 	unsigned int i;
 	unsigned int camera_num = 1;
+	uint32_t frame_counter = 0;
 
 	MMAL_COMPONENT_T *rawcam=NULL, *isp=NULL, *render=NULL;
 	MMAL_STATUS_T status;
@@ -892,14 +893,15 @@ int main(int argc, char** argv)
 	}
 		
 	start_camera_streaming(sensor, sensor_mode);
-
+	frame_counter = 0;
+	
 	do {
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		if (got_frame) {
 			graph_set_buffer(&shared_buf);
 			got_frame = 0;
 			vcos_mutex_unlock(&mutex);
-			printf("got frame\n");
+			printf("got frame %d\n", frame_counter++);
 			graph_display();
 		} else {
 			vcos_mutex_unlock(&mutex);
