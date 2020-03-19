@@ -36,10 +36,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <unistd.h> /* usleep */
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/ioctl.h>
 
-#include <linux/i2c.h>
-#include <linux/i2c-dev.h>
-#define I2C_SLAVE_FORCE 0x0706
 #include "interface/vcos/vcos.h"
 #include "bcm_host.h"
 
@@ -50,22 +55,79 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "interface/mmal/util/mmal_util.h"
 #include "interface/mmal/util/mmal_util_params.h"
 #include "interface/mmal/util/mmal_connection.h"
-
-#include "RaspiCLI.h"
-
-#include <sys/ioctl.h>
-
 #include "raw_header.h"
 
-#define DEFAULT_I2C_DEVICE 0
+//#include "EGL/eglext.h"
+#include <epoxy/gl.h>
+#include <epoxy/glx.h>
+#include <epoxy/egl.h>
+//#include <GL/glew.h>
 
-#define I2C_DEVICE_NAME_LEN 13	// "/dev/i2c-XXX"+NULL
+//#include <GL/glut.h>
+#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_EGL
+
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+#include <GL/glu.h> //gluGetError
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <EGL/eglext_brcm.h>
+
+#include "interface/mmal/mmal.h"
+#include "interface/mmal/mmal_buffer.h"
+#include "interface/mmal/util/mmal_default_components.h"
+#include "interface/mmal/util/mmal_util.h"
+#include "interface/mmal/util/mmal_util_params.h"
+#include "interface/mmal/util/mmal_connection.h"
+
+#include "shader_utils.h"
 
 int packet_idx = 0;
 
 static char i2c_device_name[I2C_DEVICE_NAME_LEN];
 
 struct brcm_raw_header *brcm_header = NULL;
+
+GLuint program;
+GLint attribute_coord1d;
+GLint uniform_offset_x;
+GLint uniform_scale_x;
+GLint uniform_mytexture;
+GLint uniform_wavenum;
+GLint uniform_NWAVES;
+GLint uniform_nxtiles;
+GLint uniform_xtile;
+GLint uniform_color;
+
+bool interpolate = false;
+bool clamp = false;
+bool showpoints = false;
+
+#define NPOINTS 262144
+#define TEXSIZE 1024
+#define NTEXTURES (NPOINTS/TEXSIZE)
+#define NWAVES 1
+
+GLuint vbo;
+GLbyte graph[NTEXTURES][TEXSIZE * NWAVES];
+//GLbyte graph[NPOINTS * NWAVES];
+GLuint texture_id[NTEXTURES];
+
+float offset_x = 0.0;
+float scale_x = 1.0;
+GLuint cam_ytex, cam_utex, cam_vtex;
+EGLImageKHR yimg = EGL_NO_IMAGE_KHR;
+EGLImageKHR uimg = EGL_NO_IMAGE_KHR;
+EGLImageKHR vimg = EGL_NO_IMAGE_KHR;
+
+EGLDisplay GDisplay;
+
+GLFWwindow* win;
+
+MMAL_BUFFER_HEADER_T shared_buf;
+bool_t got_frame = 0, aborted = 0;
+VCOS_MUTEX_T mutex;
 
 enum bayer_order {
 	//Carefully ordered so that an hflip is ^1,
@@ -173,6 +235,196 @@ typedef struct {
         int decodemetadata;
 } RASPIRAW_PARAMS_T;
 
+static void check_real(const char *file, int line) {
+	int q;
+	do {
+		q=glGetError();
+		if (q) {
+			printf("%s:%d: glError: %s (%x)\n", file, line, gluErrorString(q), q);
+		}
+	} while (q);
+}
+
+#define check() check_real(__FILE__, __LINE__)
+#define C(...) __VA_ARGS__;check();
+
+int initgraph() 
+{
+	glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
+	if (!glfwInit()) {
+		fprintf(stderr, "glfw init failed\n");
+		return 1;
+	}
+		
+ 	if (!(win=glfwCreateWindow(1280, 1024, "OscilloTest", NULL, NULL))) {
+		fprintf(stderr, "window create failed\n");
+		return 1;
+	}
+	glfwMakeContextCurrent(win);
+	GDisplay = glfwGetEGLDisplay();
+
+	C(glEnable(GL_TEXTURE_EXTERNAL_OES));
+
+	printf ("win=%p tid=%d\n",win, syscall(SYS_gettid));
+
+	GLint max_units;
+
+	C(glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &max_units));
+	if (max_units < 1) {
+		fprintf(stderr, "Your GPU does not have any vertex texture image units\n");
+		return 1;
+	}
+	
+	C(glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &max_units));
+	if (max_units < 1) {
+		fprintf(stderr, "Your GPU does not have any vertex texture image units\n");
+		return 1;
+	}
+
+	GLfloat range[2];
+
+	glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, range);
+	if (range[1] < 5.0) {
+		fprintf(stderr, "WARNING: point sprite range (%f, %f) too small\n", range[0], range[1]);
+	}
+
+	if (!init_resources()) {
+		fprintf(stderr, "Error in init_resources");
+		return 1;
+	}
+	
+	assert(!glGetError());
+	
+	return 0;
+}
+
+int init_resources() 
+{
+	program = create_program("graph.v.glsl", "graph.f.glsl");
+	//program = create_program("graph.v.glsl", "antialias.f.glsl");
+	
+	if (program == 0) {
+		fprintf(stderr, "Can't create program");
+		return 0;
+	}
+	
+	printf("texture_id=%p\n",texture_id);
+
+	attribute_coord1d = get_attrib(program, "coord1d");
+	uniform_offset_x = get_uniform(program, "offset_x");
+	uniform_scale_x = get_uniform(program, "scale_x");
+	uniform_mytexture = get_uniform(program, "mytexture");
+	uniform_wavenum = get_uniform(program, "wavenum");
+	//uniform_NWAVES = get_uniform(program, "NWAVES");
+	uniform_nxtiles = get_uniform(program, "nxtiles");
+	uniform_xtile = get_uniform(program, "xtile");
+	uniform_color = get_uniform(program, "color");
+
+	if (attribute_coord1d == -1 || uniform_offset_x == -1 || uniform_scale_x == -1 || uniform_mytexture == -1) {
+		fprintf(stderr, "Bounds checking error");
+		return 0;
+	}
+
+	// Create our datapoints, store it as bytes
+	bool positive = false;
+	int x=0;
+	for (int j = 0; j < NWAVES; j++) {
+		for (int i = 0; ; i++, x++) {
+			float y = sin(x/100.0) * (sin(x/10003.0)*.4+.5);
+			//float y = sin(x * 10.0) / (1.0 + x * x);
+			if (i < NPOINTS) {
+				graph[i/TEXSIZE][(i%TEXSIZE) + j*TEXSIZE] = roundf(y * 128 + 128);
+			} else {
+				if (positive && y<=0)
+					break; // retrig on falling edge
+			}
+			positive = (y > 0);
+		}
+	}
+
+	/* Upload the texture with our datapoints */
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &cam_ytex);
+	glGenTextures(NTEXTURES, texture_id);
+	for (int i=0; i<NTEXTURES; i++) {
+		printf("texture %d has id %d\n", i, texture_id[i]);
+		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph[i]);
+		/* Set texture wrapping mode */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		
+		/* Set texture interpolation mode */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
+	}
+
+	// Create the vertex buffer object
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE,GL_ONE);
+	// Create an array with only x values.
+	GLfloat line[NPOINTS];
+
+	// Fill it in just like an array
+	for (int i = 0; i < NPOINTS; i++) {
+		line[i] = (i - ((NPOINTS-1)/2.0)) / ((NPOINTS-1)/2.0);
+	}
+
+	// Tell OpenGL to copy our array to the buffer object
+	glBufferData(GL_ARRAY_BUFFER, sizeof line, line, GL_STATIC_DRAW);
+
+	// Enable point size control in vertex shader
+#ifndef GL_ES_VERSION_2_0
+	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+#endif
+
+	return 1;
+}
+
+void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf) 
+{
+	printf("cb: %08x %d tid=%d\n", buf->data, buf->length, syscall(SYS_gettid));
+	{
+		FILE *f=fopen("/tmp/q","wb");
+		fwrite(buf->data, buf->length, 1, f);
+		fclose(f);
+	}
+	assert(!glGetError());
+	
+#if 0
+	C(glBindTexture(GL_TEXTURE_EXTERNAL_OES, cam_ytex));
+
+	if(yimg != EGL_NO_IMAGE_KHR){
+		eglDestroyImageKHR(GDisplay, yimg);
+		yimg = EGL_NO_IMAGE_KHR;
+	}
+
+	yimg = eglCreateImageKHR(GDisplay, 
+			EGL_NO_CONTEXT, 
+			/*EGL_IMAGE_BRCM_RAW_PIXELS,*/ EGL_IMAGE_BRCM_MULTIMEDIA_Y, 
+			(EGLClientBuffer) buf->data, 
+			NULL);
+	check();
+	glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, yimg);
+	check();
+#else
+	int i=0;
+
+	for (int i=0; i<NTEXTURES; i++) {
+		void *ptr = (uint8_t *)buf->data + (262144 / 2); // + i * TEXSIZE * NWAVES;
+		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_SHORT, ptr);
+		/* Set texture wrapping mode */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+
+		/* Set texture interpolation mode */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
+	}
+#endif
+}
+
 // this literally does nothing useful
 void start_camera_streaming(const struct sensor_def *sensor, struct mode_def *mode)
 {
@@ -205,6 +457,69 @@ int encoding_to_bpp(uint32_t encoding)
 
 }
 
+void graph_display() 
+{
+	assert(!glGetError());
+	
+	fps_frames++;
+	struct timeval now, delta;
+	gettimeofday (&now, NULL);
+	timersub (&now, &fps_start, &delta);
+	if (delta.tv_sec) {
+		printf("fps %f\n",1000000.0 * fps_frames / (delta.tv_sec*100000 + delta.tv_usec));
+		fflush(stdout);
+		fps_frames = 0;
+		fps_start = now;
+	}
+
+	glUseProgram(program);
+	glUniform1i(uniform_mytexture, 0);
+
+	glUniform1f(uniform_offset_x, offset_x);
+	glUniform1f(uniform_scale_x, scale_x);
+	//	glUniform1f(uniform_NWAVES, NWAVES);
+
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+
+	/* Draw using the vertices in our vertex buffer object */
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	glEnableVertexAttribArray(attribute_coord1d);
+	glVertexAttribPointer(attribute_coord1d, 1, GL_FLOAT, GL_FALSE, 0, 0);
+
+	/* Draw the line */
+	//glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
+
+	/* Draw points as well, if requested */
+	//if (showpoints)
+
+	float scale = 16./NWAVES/2;
+	for (int j=0; j<NTEXTURES; j++) {
+		//int j=1;
+		glBindTexture(GL_TEXTURE_2D, texture_id[j]);
+		for (int i=0; i<NWAVES; i++) {
+			glUniform1f(uniform_wavenum, (2*i+1.0)/(2*NWAVES));
+			//glUniform1f(uniform_offset_x, offset_x);
+			//glUniform1f(uniform_scale_x, scale_x);
+			glUniform1f(uniform_nxtiles, NTEXTURES);
+			glUniform1f(uniform_xtile, ((float)j*2-NTEXTURES+1)/NTEXTURES);
+			//			glUniform4f(uniform_color, (j&1)*scale,((j&2)>>1)*scale,((j&4)>>2)*scale,1);
+			glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
+			//glUniform4f(uniform_color, (i&1)*scale,((i&2)>>1)*scale,((i&4)>>2)*scale,1);
+
+			//glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NPOINTS, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph+NPOINTS*i);
+			glDrawArrays(GL_POINTS, 0, NPOINTS);
+		}
+		//		glutSwapBuffers();	usleep(50000);
+	}
+	assert(!glGetError());
+	glfwSwapBuffers(win);
+	//glutSwapBuffers();
+	//glutPostRedisplay();
+}
+
 int running = 0;
 
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
@@ -220,21 +535,15 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 #if 1
 	if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 	{
-		sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
-		printf("Filename: %s\n", filename);
-		
-		file = fopen(filename, "wb");
-		if(file) {
-			printf("Writing file...\n");
-			// skip first 32 bytes.  Packets are transmitted with 32 NUL bytes first to avoid MMAL header bug(?)
-			fwrite(buffer->data + 32, buffer->length - 32, 1, file);
-			printf("Closing file...\n");
-			fclose(file);
-			printf("Done\n");
-		} else {
-			printf("File write error\n");
-		}
-		
+		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
+		//printf("Filename: %s\n", filename);
+			
+		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
+		shared_buf = *buffer;
+		printf ("shared_buf: %p -> %p %d\n", &shared_buf, shared_buf.data, shared_buf.length);
+		got_frame = 1;
+		vcos_mutex_unlock(&mutex);
+			
 		packet_idx++;
 	}
 
@@ -304,6 +613,12 @@ uint32_t order_and_bit_depth_to_encoding(enum bayer_order order, int bit_depth)
 	return 0;
 }
 
+void signal_abort(int i) 
+{
+	aborted = 1;
+	write(2, "aborting\n", 9);
+}
+
 int main(int argc, char** argv) 
 {
 	RASPIRAW_PARAMS_T cfg = { 0 };
@@ -322,6 +637,10 @@ int main(int argc, char** argv)
 	MMAL_PARAMETER_CAMERA_RX_CONFIG_T rx_cfg;
 	MMAL_PARAMETER_CAMERA_RX_TIMING_T rx_timing;
 	
+	signal(SIGINT, signal_abort);
+	signal(SIGQUIT, signal_abort);
+	
+	initgraph();
 	bcm_host_init();
 	vcos_log_register("SMVP_MMAL", VCOS_LOG_CATEGORY);
 
@@ -565,7 +884,21 @@ int main(int argc, char** argv)
 		
 	start_camera_streaming(sensor, sensor_mode);
 
-	vcos_sleep(10000000);
+	do {
+		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
+		if (got_frame) {
+			graph_set_buffer(&shared_buf);
+			got_frame = 0;
+			vcos_mutex_unlock(&mutex);
+			printf("got frame\n");
+			graph_display();
+		} else {
+			vcos_mutex_unlock(&mutex);
+		}
+		//usleep (1000000.0/cfg.fps);
+		//usleep (1000);
+	} while (!aborted);
+	
 	running = 0;
 
 	stop_camera_streaming(sensor);
