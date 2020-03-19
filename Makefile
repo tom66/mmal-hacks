@@ -9,7 +9,7 @@ CPPFLAGS=-g -O1
 all: raspiraw
 
 raspiraw: raspiraw.o RaspiCLI.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
 	-rm -f *.o
