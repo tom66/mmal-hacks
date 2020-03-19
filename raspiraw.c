@@ -386,11 +386,15 @@ int init_resources()
 void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf) 
 {
 	printf("cb: %08x %d tid=%d\n", buf->data, buf->length, syscall(SYS_gettid));
+	
+	/*
 	{
 		FILE *f=fopen("/tmp/q","wb");
 		fwrite(buf->data, buf->length, 1, f);
 		fclose(f);
 	}
+	*/
+	
 	assert(!glGetError());
 	
 #if 0
@@ -413,7 +417,7 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	int i=0;
 
 	for (int i=0; i<NTEXTURES; i++) {
-		void *ptr = (uint8_t *)buf->data + (262144 / 2) - 1024 + (NTEXTURES * 1024); // + i * TEXSIZE * NWAVES;
+		void *ptr = (uint8_t *)buf->data + (262144 / 2) - 1024 + (i * 1024); // + i * TEXSIZE * NWAVES;
 		
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_SHORT, ptr);
@@ -502,6 +506,7 @@ void graph_display()
 	for (int j=0; j<NTEXTURES; j++) {
 		//int j=1;
 		glBindTexture(GL_TEXTURE_2D, texture_id[j]);
+		
 		for (int i=0; i<NWAVES; i++) {
 			glUniform1f(uniform_wavenum, (2*i+1.0)/(2*NWAVES));
 			//glUniform1f(uniform_offset_x, offset_x);
