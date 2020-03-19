@@ -102,7 +102,7 @@ bool interpolate = false;
 bool clamp = false;
 bool showpoints = false;
 
-#define NPOINTS 3072
+#define NPOINTS 2048
 #define TEXSIZE 1024
 #define NTEXTURES (NPOINTS/TEXSIZE)
 #define NWAVES 70
@@ -413,7 +413,7 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	int i=0;
 
 	for (int i=0; i<NTEXTURES; i++) {
-		void *ptr = (uint8_t *)buf->data + (262144 / 2); // + i * TEXSIZE * NWAVES;
+		void *ptr = (uint8_t *)buf->data + (262144 / 2) - 1024; // + i * TEXSIZE * NWAVES;
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_SHORT, ptr);
 
