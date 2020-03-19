@@ -336,7 +336,7 @@ int init_resources()
 	for (int i=0; i<NWAVES; i++) {
 		printf("texture %d has id %d\n", i, texture_id[i]);
 		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_BYTE);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_BYTE, graph[0]);
 		
 		/* Set texture wrapping mode */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
