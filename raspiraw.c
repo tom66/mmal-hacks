@@ -409,11 +409,12 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	for (int w=0; w < NWAVES; w++) {
 		for (int i=0; i < NTEXTURES; i++) {
 			//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
-			void *ptr = (int8_t *)(buf->data + (i * TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2) - TEXSIZE);
+			//void *ptr = (int8_t *)(buf->data + (i * TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2) - TEXSIZE);
+			void *ptr = (int8_t *)(buf->data + (i * TEXSIZE) + (WAVE_SIZE * (0 + 1)) - (WAVE_SIZE / 2) - TEXSIZE);
 			
 			// WAVE_SIZE
 			
-			glBindTexture(GL_TEXTURE_2D, texture_id[i + (0 * NTEXTURES)]);
+			glBindTexture(GL_TEXTURE_2D, texture_id[i + (w * NTEXTURES)]);
 			check();
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
 			check();
