@@ -407,7 +407,7 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	for (int w=0; w < NWAVES; w++) {
 		for (int i=0; i < NTEXTURES; i++) {
 			//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
-			void *ptr = (int8_t *)(buf->data + ((i + 1) * TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2));
+			void *ptr = (int8_t *)(buf->data + (i * TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2) + (WAVE_SIZE / 4));
 			
 			// WAVE_SIZE
 			
