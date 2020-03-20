@@ -482,7 +482,6 @@ void graph_display()
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-
 	/* Draw using the vertices in our vertex buffer object */
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
@@ -495,7 +494,7 @@ void graph_display()
 	/* Draw points as well, if requested */
 	//if (showpoints)
 
-	float scale = 16./NWAVES/2;
+	float scale = 0.25f; // 16./NWAVES/2;
 	for (int j=0; j<NTEXTURES; j++) {
 		//int j=1;
 		for (int i=0; i<NWAVES; i++) {
