@@ -473,6 +473,8 @@ void graph_display()
 	}
 
 	glUseProgram(program);
+	check();
+	
 	glUniform1i(uniform_mytexture, 0);
 	check();
 	glUniform1f(uniform_offset_x, offset_x);
