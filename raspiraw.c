@@ -319,7 +319,7 @@ int init_resources()
 	uniform_scale_x = get_uniform(program, "scale_x");
 	uniform_mytexture = get_uniform(program, "mytexture");
 	uniform_wavenum = get_uniform(program, "wavenum");
-	//uniform_NWAVES = get_uniform(program, "NWAVES");
+	uniform_NWAVES = get_uniform(program, "NWAVES");
 	uniform_nxtiles = get_uniform(program, "nxtiles");
 	uniform_xtile = get_uniform(program, "xtile");
 	uniform_color = get_uniform(program, "color");
