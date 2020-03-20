@@ -481,7 +481,8 @@ void graph_display()
 	check();
 	glUniform1f(uniform_scale_x, scale_x);
 	check();
-	//	glUniform1f(uniform_NWAVES, NWAVES);
+	glUniform1f(uniform_NWAVES, 0);
+	check();
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	check();
@@ -497,15 +498,7 @@ void graph_display()
 	glVertexAttribPointer(attribute_coord1d, 1, GL_FLOAT, GL_FALSE, 0, 0);
 	check();
 
-	/* Draw the line */
-	//glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
-
-	/* Draw points as well, if requested */
-	//if (showpoints)
-
 	float scale = 0.125f; // 16./NWAVES/2;
-	
-	check();
 	
 	glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
 	check();
