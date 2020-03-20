@@ -470,7 +470,7 @@ void graph_display()
 	gettimeofday (&now, NULL);
 	timersub (&now, &fps_start, &delta);
 	//if (delta.tv_sec) {
-	printf("fps %f\n",1000000.0 * fps_frames / (delta.tv_sec*100000 + delta.tv_usec));
+	printf("fps %f\n",1000000.0 * fps_frames / (delta.tv_sec*1000000 + delta.tv_usec));
 	//fflush(stdout);
 	fps_frames = 0;
 	fps_start = now;
