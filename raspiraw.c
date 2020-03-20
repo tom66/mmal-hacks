@@ -412,16 +412,20 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 			// WAVE_SIZE
 			
 			glBindTexture(GL_TEXTURE_2D, texture_id[i + (w * NTEXTURES)]);
+			check();
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
+			check();
 		}
 	}
 	
 	/* Set texture wrapping mode */
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	check();
 
 	/* Set texture interpolation mode */
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
+	check();
 #endif
 }
 
