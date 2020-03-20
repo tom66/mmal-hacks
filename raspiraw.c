@@ -515,7 +515,7 @@ void graph_display()
 		//		glutSwapBuffers();	usleep(50000);
 	}
 	
-	assert(!glGetError());
+	C(assert(!glGetError()));
 	glfwSwapBuffers(win);
 	//glutSwapBuffers();
 	//glutPostRedisplay();
