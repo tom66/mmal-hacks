@@ -541,10 +541,9 @@ void graph_display()
 
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NPOINTS, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph+NPOINTS*i);
 			
+			glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
+			check();
 		}
-		
-		glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
-		check();
 		//		glutSwapBuffers();	usleep(50000);
 	}
 	
