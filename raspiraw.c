@@ -504,7 +504,7 @@ void graph_display()
 	glVertexAttribPointer(attribute_coord1d, 1, GL_FLOAT, GL_FALSE, 0, 0);
 	check();
 
-	float scale = 0.25f; // 16./NWAVES/2;
+	float scale = 0.125f; // 16./NWAVES/2;
 	
 	glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
 	check();
