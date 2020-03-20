@@ -496,9 +496,6 @@ void graph_display()
 
 	float scale = 0.125f; // 16./NWAVES/2;
 	
-	glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
-	glUniform1f(uniform_nxtiles, NTEXTURES);
-	glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
 			
 	for (int j=0; j<NTEXTURES; j++) {
 		//int j=1;
@@ -509,6 +506,11 @@ void graph_display()
 			glUniform1f(uniform_xtile, ((float)j*2-NTEXTURES+1)/NTEXTURES);
 			check();
 			
+			glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
+			glUniform1f(uniform_nxtiles, NTEXTURES);
+			glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
+			check();
+	
 			//glUniform1f(uniform_offset_x, offset_x);
 			//glUniform1f(uniform_scale_x, scale_x);
 			
