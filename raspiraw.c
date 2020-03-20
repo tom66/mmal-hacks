@@ -372,7 +372,7 @@ int init_resources()
 
 void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf) 
 {
-	printf("cb: %08x %d tid=%d\n", buf->data, buf->length, syscall(SYS_gettid));
+	//printf("cb: %08x %d tid=%d\n", buf->data, buf->length, syscall(SYS_gettid));
 	
 	/*
 	{
@@ -914,7 +914,7 @@ int main(int argc, char** argv)
 			graph_set_buffer(&shared_buf);
 			got_frame = 0;
 			vcos_mutex_unlock(&mutex);
-			printf("got frame %d\n", frame_counter++);
+			//printf("got frame %d\n", frame_counter++);
 			graph_display();
 		} else {
 			vcos_mutex_unlock(&mutex);
