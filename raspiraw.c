@@ -128,6 +128,8 @@ MMAL_BUFFER_HEADER_T shared_buf;
 bool_t got_frame = 0, aborted = 0;
 VCOS_MUTEX_T mutex;
 
+unsigned long int frame_time_usec = 0;
+
 static unsigned int fps_frames = 0;
 static struct timeval fps_start = {0,0};
 
@@ -463,18 +465,27 @@ int encoding_to_bpp(uint32_t encoding)
 
 void graph_display() 
 {
+	struct timeval now, delta;
+
 	assert(!glGetError());
 	
+	// Sum frame times together and print estimated fps every hundred frames
 	fps_frames++;
-	struct timeval now, delta;
 	gettimeofday (&now, NULL);
 	timersub (&now, &fps_start, &delta);
-	//if (delta.tv_sec) {
-	printf("fps %f\n",1000000.0 * fps_frames / (delta.tv_sec*1000000 + delta.tv_usec));
-	//fflush(stdout);
+	
+	frame_time_usec += (delta.tv_sec * 1000000) + delta.tv_usec;
+	
+	if(fps_frames > 100) {
+		frame_time_usec /= 100;
+		printf("FPS: %.4f (frame time = ~%d us)", 1e6 / frame_time_usec, frame_time_usec);
+		
+		fps_frames = 0;
+		frame_time_usec = 0;
+	}
+	
 	fps_frames = 0;
 	fps_start = now;
-	//}
 
 	check();
 	
