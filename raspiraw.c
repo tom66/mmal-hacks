@@ -130,8 +130,8 @@ VCOS_MUTEX_T mutex;
 
 unsigned long int frame_time_usec = 0;
 
-static unsigned int fps_frames = 0;
-static struct timeval fps_start = {0,0};
+unsigned int fps_frames = 0;
+struct timeval fps_start = {0,0};
 
 enum bayer_order {
 	//Carefully ordered so that an hflip is ^1,
