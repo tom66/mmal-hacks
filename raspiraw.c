@@ -497,7 +497,9 @@ void graph_display()
 	float scale = 0.125f; // 16./NWAVES/2;
 	
 	glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
+	check();
 	glUniform1f(uniform_nxtiles, NTEXTURES);
+	check();
 	glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
 	check();
 			
