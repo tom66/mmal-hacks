@@ -499,7 +499,7 @@ void graph_display()
 		//int j=1;
 		for (int i=0; i<NWAVES; i++) {
 			glBindTexture(GL_TEXTURE_2D, texture_id[(i * NTEXTURES) + j]);
-			glUniform1f(uniform_wavenum, (2*i+1.0)/(2*NWAVES));
+			glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
 			//glUniform1f(uniform_offset_x, offset_x);
 			//glUniform1f(uniform_scale_x, scale_x);
 			glUniform1f(uniform_nxtiles, NTEXTURES);
