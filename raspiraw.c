@@ -474,19 +474,26 @@ void graph_display()
 
 	glUseProgram(program);
 	glUniform1i(uniform_mytexture, 0);
-
+	check();
 	glUniform1f(uniform_offset_x, offset_x);
+	check();
 	glUniform1f(uniform_scale_x, scale_x);
+	check();
 	//	glUniform1f(uniform_NWAVES, NWAVES);
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
+	check();
 	glClear(GL_COLOR_BUFFER_BIT);
+	check();
 
 	/* Draw using the vertices in our vertex buffer object */
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	check();
 
 	glEnableVertexAttribArray(attribute_coord1d);
+	check();
 	glVertexAttribPointer(attribute_coord1d, 1, GL_FLOAT, GL_FALSE, 0, 0);
+	check();
 
 	/* Draw the line */
 	//glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
@@ -495,6 +502,8 @@ void graph_display()
 	//if (showpoints)
 
 	float scale = 0.125f; // 16./NWAVES/2;
+	
+	check();
 	
 	glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
 	check();
