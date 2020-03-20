@@ -478,7 +478,7 @@ void graph_display()
 	
 	if(fps_frames >= 100) {
 		frame_time_usec /= 100;
-		printf("FPS: %.4f (frame time = ~%d us)", 1e6 / frame_time_usec, frame_time_usec);
+		printf("FPS: %.4f (frame time = ~%d us)\n", 1e6 / frame_time_usec, frame_time_usec);
 		
 		fps_frames = 0;
 		frame_time_usec = 0;
