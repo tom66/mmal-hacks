@@ -495,26 +495,23 @@ void graph_display()
 	//if (showpoints)
 
 	float scale = 0.125f; // 16./NWAVES/2;
+	
+	glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
+	glUniform1f(uniform_nxtiles, NTEXTURES);
+	glUniform1f(uniform_xtile, ((float)j*2-NTEXTURES+1)/NTEXTURES);
+	glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
+			
 	for (int j=0; j<NTEXTURES; j++) {
 		//int j=1;
 		for (int i=0; i<NWAVES; i++) {
 			glBindTexture(GL_TEXTURE_2D, texture_id[(i * NTEXTURES) + j]);
 			check();
 			
-			glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
-			check();
-			
 			//glUniform1f(uniform_offset_x, offset_x);
 			//glUniform1f(uniform_scale_x, scale_x);
-			glUniform1f(uniform_nxtiles, NTEXTURES);
-			check();
 			
-			glUniform1f(uniform_xtile, ((float)j*2-NTEXTURES+1)/NTEXTURES);
-			check();
 			
 			//			glUniform4f(uniform_color, (j&1)*scale,((j&2)>>1)*scale,((j&4)>>2)*scale,1);
-			glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
-			check();
 			//glUniform4f(uniform_color, (i&1)*scale,((i&2)>>1)*scale,((i&4)>>2)*scale,1);
 
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NPOINTS, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph+NPOINTS*i);
