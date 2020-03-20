@@ -476,6 +476,8 @@ void graph_display()
 		fps_start = now;
 	}
 
+	check();
+	
 	glUseProgram(program);
 	check();
 	
