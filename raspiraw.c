@@ -103,7 +103,7 @@ bool clamp = true;
 bool showpoints = false;
 
 #define WAVE_SIZE 		16384				// How big each acquisition is
-#define NPOINTS 		1024				// How many points to render
+#define NPOINTS 		2048				// How many points to render
 #define TEXSIZE 		1024				// Size of the textures
 #define NTEXTURES 		(NPOINTS/TEXSIZE)	// Number of textures
 #define NWAVES 			5					// Number of waves to render per frame
