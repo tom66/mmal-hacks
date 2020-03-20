@@ -540,9 +540,11 @@ void graph_display()
 			//glUniform4f(uniform_color, (i&1)*scale,((i&2)>>1)*scale,((i&4)>>2)*scale,1);
 
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NPOINTS, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph+NPOINTS*i);
-			glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
-			check();
+			
 		}
+		
+		glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
+		check();
 		//		glutSwapBuffers();	usleep(50000);
 	}
 	
