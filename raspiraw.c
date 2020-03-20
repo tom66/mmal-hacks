@@ -469,12 +469,12 @@ void graph_display()
 	struct timeval now, delta;
 	gettimeofday (&now, NULL);
 	timersub (&now, &fps_start, &delta);
-	if (delta.tv_sec) {
-		printf("fps %f\n",1000000.0 * fps_frames / (delta.tv_sec*100000 + delta.tv_usec));
-		fflush(stdout);
-		fps_frames = 0;
-		fps_start = now;
-	}
+	//if (delta.tv_sec) {
+	printf("fps %f\n",1000000.0 * fps_frames / (delta.tv_sec*100000 + delta.tv_usec));
+	//fflush(stdout);
+	fps_frames = 0;
+	fps_start = now;
+	//}
 
 	check();
 	
@@ -504,7 +504,7 @@ void graph_display()
 	glVertexAttribPointer(attribute_coord1d, 1, GL_FLOAT, GL_FALSE, 0, 0);
 	check();
 
-	float scale = 0.125f; // 16./NWAVES/2;
+	float scale = 0.0625f; // 16./NWAVES/2;
 	
 	glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
 	check();
