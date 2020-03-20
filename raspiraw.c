@@ -106,7 +106,7 @@ bool showpoints = false;
 #define NPOINTS 		2048				// How many points to render
 #define TEXSIZE 		1024				// Size of the textures
 #define NTEXTURES 		(NPOINTS/TEXSIZE)	// Number of textures
-#define NWAVES 			5					// Number of waves to render per frame
+#define NWAVES 			6					// Number of waves to render per frame
 
 GLuint vbo;
 GLbyte graph[NTEXTURES][TEXSIZE * NWAVES];
@@ -542,9 +542,9 @@ void graph_display()
 
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NPOINTS, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph+NPOINTS*i);
 			
-			//glDrawArrays(GL_POINTS, 0, NPOINTS);
+			glDrawArrays(GL_POINTS, 0, NPOINTS);
 			//glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
-			glDrawArrays(GL_TRIANGLES, 0, NPOINTS);
+			//glDrawArrays(GL_TRIANGLES, 0, NPOINTS);
 			check();
 		}
 		//		glutSwapBuffers();	usleep(50000);
