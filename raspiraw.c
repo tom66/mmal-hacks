@@ -470,11 +470,11 @@ void graph_display()
 	assert(!glGetError());
 	
 	// Sum frame times together and print estimated fps every hundred frames
-	fps_frames++;
 	gettimeofday (&now, NULL);
 	timersub (&now, &fps_start, &delta);
 	
 	frame_time_usec += (delta.tv_sec * 1000000) + delta.tv_usec;
+	fps_frames++;
 	
 	if(fps_frames > 100) {
 		frame_time_usec /= 100;
@@ -484,7 +484,6 @@ void graph_display()
 		frame_time_usec = 0;
 	}
 	
-	fps_frames = 0;
 	fps_start = now;
 
 	check();
