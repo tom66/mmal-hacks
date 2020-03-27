@@ -575,7 +575,7 @@ int running = 0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
-	printf("Buffer %p returned, data %p, filled %d, offset %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->offset, buffer->pts, buffer->flags, running);
+	//printf("Buffer %p returned, data %p, filled %d, offset %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->offset, buffer->pts, buffer->flags, running);
 
 		
 	//RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
@@ -586,7 +586,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		//printf("Filename: %s\n", filename);
 		
-		FILE *file = fopen("/tmpfs/wavetest", "wb");
+		FILE *file = fopen("wavetest/wavetest.bin", "wb");
 		if(file) {
 			fwrite(buffer->data, buffer->length, 1, file);
 			fclose(file);
