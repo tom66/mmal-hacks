@@ -102,11 +102,11 @@ bool interpolate = false;
 bool clamp = true;
 bool showpoints = false;
 
-#define WAVE_SIZE 		8192				// How big each acquisition is
+#define WAVE_SIZE 		16384				// How big each acquisition is
 #define NPOINTS 		2048				// How many points to render
 #define TEXSIZE 		1024				// Size of the textures
 #define NTEXTURES 		(NPOINTS/TEXSIZE)	// Number of textures
-#define NWAVES 			128					// Number of waves to render per frame
+#define NWAVES 			5					// Number of waves to render per frame
 
 GLuint vbo;
 GLbyte graph[NTEXTURES][TEXSIZE * NWAVES];
@@ -132,9 +132,6 @@ unsigned long int frame_time_usec = 0;
 
 unsigned int fps_frames = 0;
 struct timeval fps_start = {0,0};
-
-float bright=.5;
-bool lines=false;
 
 enum bayer_order {
 	//Carefully ordered so that an hflip is ^1,
@@ -255,22 +252,9 @@ static void check_real(const char *file, int line) {
 #define check() check_real(__FILE__, __LINE__)
 #define C(...) __VA_ARGS__;check();
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if (key == GLFW_KEY_S && action == GLFW_PRESS)
-		bright*=1.1;
-	if (key == GLFW_KEY_A && action == GLFW_PRESS)
-		bright/=1.1;
-	if (key == GLFW_KEY_L && action == GLFW_PRESS)
-		lines=!lines;
-}
-
-
 int initgraph() 
 {
 	glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-
 	if (!glfwInit()) {
 		fprintf(stderr, "glfw init failed\n");
 		return 1;
@@ -283,7 +267,7 @@ int initgraph()
 	glfwMakeContextCurrent(win);
 	GDisplay = glfwGetEGLDisplay();
 
-	//C(glEnable(GL_TEXTURE_EXTERNAL_OES));
+	C(glEnable(GL_TEXTURE_EXTERNAL_OES));
 
 	printf ("win=%p tid=%d\n",win, syscall(SYS_gettid));
 
@@ -312,18 +296,16 @@ int initgraph()
 		fprintf(stderr, "Error in init_resources");
 		return 1;
 	}
-	glfwSetKeyCallback(win, key_callback);
 	
 	assert(!glGetError());
 	
 	return 0;
 }
 
-
 int init_resources() 
 {
-	//program = create_program("graph.v.glsl", "graph.f.glsl");
-	program = create_program("graph.v.glsl", "antialias.f.glsl");
+	program = create_program("graph.v.glsl", "graph.f.glsl");
+	//program = create_program("graph.v.glsl", "antialias.f.glsl");
 	
 	if (program == 0) {
 		fprintf(stderr, "Can't create program");
@@ -373,7 +355,7 @@ int init_resources()
 	glBlendFunc(GL_ONE,GL_ONE);
 	// Create an array with only x values.
 	GLfloat line[NPOINTS];
-	glPointSize(2.0);
+
 	// Fill it in just like an array
 	for (int i = 0; i < NPOINTS; i++) {
 		line[i] = (i - ((NPOINTS-1)/2.0)) / ((NPOINTS-1)/2.0);
@@ -424,16 +406,18 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	int i = 0;
 	int w = 0;
 
-	for (int i=0; i < NTEXTURES; i++) {
-		uint8_t tmptex[TEXSIZE*NWAVES];
-		for (int w=0; w < NWAVES; w++) {
+	for (int w=0; w < NWAVES; w++) {
+		for (int i=0; i < NTEXTURES; i++) {
+			//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
 			void *ptr = (int8_t *)(buf->data + (i * TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2) - TEXSIZE);
-			memcpy(&tmptex[w*TEXSIZE], ptr, TEXSIZE);
+			
+			// WAVE_SIZE
+			
+			glBindTexture(GL_TEXTURE_2D, texture_id[i + (w * NTEXTURES)]);
+			check();
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
+			check();
 		}
-	
-		//glBindTexture(GL_TEXTURE_2D, texture_id[i + (w * NTEXTURES)]);
-		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, tmptex);
 	}
 	
 	/* Set texture wrapping mode */
@@ -484,6 +468,7 @@ void graph_display()
 	struct timeval now, delta;
 
 	assert(!glGetError());
+	
 	// Sum frame times together and print estimated fps every hundred frames
 	gettimeofday (&now, NULL);
 	timersub (&now, &fps_start, &delta);
@@ -529,23 +514,24 @@ void graph_display()
 	glVertexAttribPointer(attribute_coord1d, 1, GL_FLOAT, GL_FALSE, 0, 0);
 	check();
 
-	float scale = bright/NWAVES/2;
+	float scale = 0.2f; // 16./NWAVES/2;
 	
 	
+	//glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
 	//check();
 	glUniform1f(uniform_nxtiles, NTEXTURES);
 	check();
-	//glUniform4f(uniform_color, 1*scale,4*scale,1*scale);
-	glUniform3f(uniform_color, 1*scale,4*scale,1*scale);
+	glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
 	check();
 			
-	for (int j=0; j<NTEXTURES; j++) {
-		glBindTexture(GL_TEXTURE_2D, texture_id[j]);
-		for (int i=0; i<NWAVES; i++) {
+	for (int i=0; i<NWAVES; i++) {
+		for (int j=0; j<NTEXTURES; j++) {
 		//int j=1;
-			glUniform1f(uniform_wavenum, (2*i+1.0)/(2*NWAVES));
+			glBindTexture(GL_TEXTURE_2D, texture_id[(i * NTEXTURES) + j]);
+			check();
 			
 			glUniform1f(uniform_xtile, ((float)j*2-NTEXTURES+1)/NTEXTURES);
+			check();
 			
 			//glUniform1f(uniform_offset_x, offset_x);
 			//glUniform1f(uniform_scale_x, scale_x);
@@ -557,7 +543,7 @@ void graph_display()
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NPOINTS, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph+NPOINTS*i);
 			
 			//glDrawArrays(GL_POINTS, 0, NPOINTS);
-			glDrawArrays(lines?GL_LINE_STRIP:GL_POINTS, 0, NPOINTS);
+			glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
 			//glDrawArrays(GL_TRIANGLES, 0, NPOINTS);
 			check();
 		}
@@ -566,7 +552,6 @@ void graph_display()
 	
 	assert(!glGetError());
 	glfwSwapBuffers(win);
-	glfwPollEvents();
 	//glutSwapBuffers();
 	//glutPostRedisplay();
 }
@@ -588,12 +573,6 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	{
 		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		//printf("Filename: %s\n", filename);
-		
-		f = fopen("/tmpfs/wavetest", "w");
-		if(f) {
-			fwrite(f, buffer->data, buffer->length);
-			fclose(f);
-		}
 			
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		shared_buf = *buffer;
@@ -947,7 +926,7 @@ int main(int argc, char** argv)
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		if (got_frame) {
 			graph_set_buffer(&shared_buf);
-			//got_frame = 0;
+			got_frame = 0;
 			vcos_mutex_unlock(&mutex);
 			//printf("got frame %d\n", frame_counter++);
 			graph_display();
@@ -955,7 +934,7 @@ int main(int argc, char** argv)
 			vcos_mutex_unlock(&mutex);
 		}
 		//usleep (1000000.0/cfg.fps);
-		usleep (1000);
+		//usleep (1000);
 	} while (!aborted);
 	
 	running = 0;

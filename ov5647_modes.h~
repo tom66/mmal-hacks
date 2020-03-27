@@ -853,8 +853,8 @@ struct mode_def ov5647_modes[] = {
    {
       .regs          = ov5647_5MPix,
       .num_regs      = NUM_ELEMENTS(ov5647_5MPix),
-      .width         = 4096,
-      .height        = 256,
+      .width         = 2048,
+      .height        = 128,
       .encoding      = 0,
       .order         = BAYER_ORDER_GBRG,
       .native_bit_depth = 8,

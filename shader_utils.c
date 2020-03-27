@@ -77,6 +77,7 @@ GLuint create_shader(const char* filename, GLenum type)
   }
   GLuint res = glCreateShader(type);
   const GLchar* sources[] = {
+#if 0
     // Define GLSL version
 #ifdef GL_ES_VERSION_2_0
     "#version 100\n"  // OpenGL ES 2.0
@@ -103,8 +104,10 @@ GLuint create_shader(const char* filename, GLenum type)
     "#define highp  \n"
 #endif
     ,
+#endif
     source };
-  glShaderSource(res, 3, sources, NULL);
+  //glShaderSource(res, 3, sources, NULL);
+  glShaderSource(res, 1, sources, NULL);
   free((void*)source);
 
   glCompileShader(res);

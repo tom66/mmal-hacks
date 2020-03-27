@@ -103,7 +103,10 @@ bool clamp = true;
 bool showpoints = false;
 
 #define WAVE_SIZE 		8192				// How big each acquisition is
-#define NPOINTS 		2048				// How many points to render
+#define NPOINTS 		2048
+
+
+// How many points to render
 #define TEXSIZE 		1024				// Size of the textures
 #define NTEXTURES 		(NPOINTS/TEXSIZE)	// Number of textures
 #define NWAVES 			128					// Number of waves to render per frame
@@ -323,7 +326,8 @@ int initgraph()
 int init_resources() 
 {
 	//program = create_program("graph.v.glsl", "graph.f.glsl");
-	program = create_program("graph.v.glsl", "antialias.f.glsl");
+	program = create_program("graph.v.glsl", "g2.f.glsl");
+	//program = create_program("graph.v.glsl", "antialias.f.glsl");
 	
 	if (program == 0) {
 		fprintf(stderr, "Can't create program");
@@ -588,12 +592,6 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	{
 		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		//printf("Filename: %s\n", filename);
-		
-		f = fopen("/tmpfs/wavetest", "w");
-		if(f) {
-			fwrite(f, buffer->data, buffer->length);
-			fclose(f);
-		}
 			
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		shared_buf = *buffer;
