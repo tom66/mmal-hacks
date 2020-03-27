@@ -394,13 +394,12 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 {
 	//printf("cb: %08x %d tid=%d\n", buf->data, buf->length, syscall(SYS_gettid));
 	
-	/*
-	{
-		FILE *f=fopen("/tmp/q","wb");
+	FILE *f=fopen("/tmpfs/wavetest", "wb");
+		
+	if(f) {
 		fwrite(buf->data, buf->length, 1, f);
 		fclose(f);
 	}
-	*/
 	
 	assert(!glGetError());
 	
