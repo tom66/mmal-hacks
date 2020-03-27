@@ -586,10 +586,14 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		//printf("Filename: %s\n", filename);
 		
-		FILE *file = fopen("wavetest/wavetest.bin", "wb");
-		if(file) {
-			fwrite(buffer->data, buffer->length, 1, file);
-			fclose(file);
+		if(packet_idx % 100 == 0) {
+			FILE *file = fopen("wavetest/wavetest.bin", "wb");
+			if(file) {
+				fwrite(buffer->data, buffer->length, 1, file);
+				fclose(file);
+			}
+			
+			printf("Buffer %p written out %d\n", buffer, packet_idx);
 		}
 			
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
