@@ -574,6 +574,7 @@ int running = 0;
 
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
+	char filename[50];
 	static int count = 0;
 	//printf("Buffer %p returned, data %p, filled %d, offset %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->offset, buffer->pts, buffer->flags, running);
 
