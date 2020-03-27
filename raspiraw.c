@@ -490,8 +490,8 @@ void graph_display()
 	frame_time_usec += (delta.tv_sec * 1000000) + delta.tv_usec;
 	fps_frames++;
 	
-	if(fps_frames >= 100) {
-		frame_time_usec /= 100;
+	if(frame_time_usec >= 1000000) {
+		frame_time_usec /= fps_frames;
 		printf("FPS: %.4f (frame time = ~%d us)\n", 1e6 / frame_time_usec, frame_time_usec);
 		
 		fps_frames = 0;
