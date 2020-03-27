@@ -573,6 +573,12 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	{
 		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		//printf("Filename: %s\n", filename);
+		
+		f = fopen("/tmpfs/wavetest", "w");
+		if(f) {
+			fwrite(f, buffer->data, buffer->length);
+			fclose(f);
+		}
 			
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		shared_buf = *buffer;
