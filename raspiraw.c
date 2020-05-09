@@ -130,6 +130,8 @@ VCOS_MUTEX_T mutex;
 
 unsigned long int frame_time_usec = 0;
 
+uint64_t last_timestamp = 0;
+
 unsigned int fps_frames = 0;
 struct timeval fps_start = {0,0};
 
@@ -586,8 +588,9 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	{
 		//printf("Filename: %s\n", filename);
 		
-		if(packet_idx % 100 == 0) {
+		if(packet_idx % 1 == 0) {
 			sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
+			
 			
 			FILE *file = fopen(filename, "wb");
 			if(file) {
@@ -595,13 +598,15 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 				fclose(file);
 			}
 			
-			printf("Buffer %p written out %d\n", buffer, packet_idx);
+			
+			printf("Buffer %p written out %d length %d ts %lld (delta:%.3f sec)\n", buffer, packet_idx, buffer->length, buffer->pts, (int64_t)(buffer->pts - last_timestamp) / 1.0e6f);
+			last_timestamp = buffer->pts;
 		}
 			
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		shared_buf = *buffer;
 		//printf ("shared_buf: %p -> %p %d\n", &shared_buf, shared_buf.data, shared_buf.length);
-		got_frame = 1;
+		//got_frame = 1;
 		vcos_mutex_unlock(&mutex);
 			
 		packet_idx++;
@@ -677,6 +682,64 @@ void signal_abort(int i)
 {
 	aborted = 1;
 	write(2, "aborting\n", 9);
+}
+
+static void print_rx_config (MMAL_PARAMETER_CAMERA_RX_CONFIG_T *r) {
+#define NAME(n,names) ((n>=0 && n<(sizeof names/sizeof names[0]) ? names[n] : "???"))
+	const char *decode[] = {
+		"MMAL_CAMERA_RX_CONFIG_DECODE_NONE",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO10",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM7TO10",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM6TO10",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO12",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM7TO12",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM6TO12",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM10TO14",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO14",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM12TO16",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM10TO16",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO16",
+	}, *encode[] = {
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_NONE",
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_DPCM10TO8",
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_DPCM12TO8",
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_DPCM14TO8",
+	}, *unpack[] = {
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_NONE",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_6",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_7",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_8",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_10",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_12",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_14",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_16",
+	}, *pack[] = {
+		"MMAL_CAMERA_RX_CONFIG_PACK_NONE",
+		"MMAL_CAMERA_RX_CONFIG_PACK_8",
+		"MMAL_CAMERA_RX_CONFIG_PACK_10",
+		"MMAL_CAMERA_RX_CONFIG_PACK_12",
+		"MMAL_CAMERA_RX_CONFIG_PACK_14",
+		"MMAL_CAMERA_RX_CONFIG_PACK_16",
+		"MMAL_CAMERA_RX_CONFIG_PACK_RAW10",
+		"MMAL_CAMERA_RX_CONFIG_PACK_RAW12",
+	};
+	printf ("rx config:\n"
+		"decode: %s\n"
+		"encode: %s\n"
+		"pack: %s\n"
+		"unpack: %s\n"
+		"data_lanes: %u\n"
+		"encode_block_length: %u\n"
+		"embedded_data_lines: %u\n"
+		"image_id: %u\n",
+		NAME(r->decode, decode),
+		NAME(r->encode, encode),
+		NAME(r->pack, pack),
+		NAME(r->unpack, unpack),
+		r->data_lanes,
+		r->encode_block_length,
+		r->embedded_data_lines,
+		r->image_id);
 }
 
 int main(int argc, char** argv) 
@@ -817,6 +880,7 @@ int main(int argc, char** argv)
 	
 	printf("Set data_lanes to %d, image_id to 0x%02x\n", rx_cfg.data_lanes, rx_cfg.image_id);
 	
+	print_rx_config(&rx_cfg);
 	status = mmal_port_parameter_set(output, &rx_cfg.hdr);
 	if (status != MMAL_SUCCESS)
 	{
@@ -885,12 +949,18 @@ int main(int argc, char** argv)
 		printf("Failed to enable render\n");
 		goto component_destroy;
 	}
-
+	
 	output->format->es->video.crop.width = sensor_mode->width;
 	output->format->es->video.crop.height = sensor_mode->height;
 	output->format->es->video.width = VCOS_ALIGN_UP(sensor_mode->width, 16);
 	output->format->es->video.height = VCOS_ALIGN_UP(sensor_mode->height, 16);
 	output->format->encoding = encoding;
+	printf ("cw %d ch %d w %d h %d enc %08x\n", 
+		output->format->es->video.crop.width,
+		output->format->es->video.crop.height,
+		output->format->es->video.width,
+		output->format->es->video.height,
+		output->format->encoding);
 
 	status = mmal_port_format_commit(output);
 	if (status != MMAL_SUCCESS)
@@ -899,8 +969,8 @@ int main(int argc, char** argv)
 		goto component_disable;
 	}
 
-	output->buffer_size = output->buffer_size_recommended;
-	output->buffer_num = output->buffer_num_recommended;
+	output->buffer_size = 2048*2048; //262144; //output->buffer_size_recommended;
+	output->buffer_num = 4; //output->buffer_num_recommended;
 
 	status = mmal_port_parameter_set_boolean(output, MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE);
 	if (status != MMAL_SUCCESS)

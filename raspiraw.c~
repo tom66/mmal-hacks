@@ -102,11 +102,11 @@ bool interpolate = false;
 bool clamp = true;
 bool showpoints = false;
 
-#define WAVE_SIZE 		16384				// How big each acquisition is
+#define WAVE_SIZE 		8192				// How big each acquisition is
 #define NPOINTS 		2048				// How many points to render
 #define TEXSIZE 		1024				// Size of the textures
 #define NTEXTURES 		(NPOINTS/TEXSIZE)	// Number of textures
-#define NWAVES 			5					// Number of waves to render per frame
+#define NWAVES 			128					// Number of waves to render per frame
 
 GLuint vbo;
 GLbyte graph[NTEXTURES][TEXSIZE * NWAVES];
@@ -132,6 +132,9 @@ unsigned long int frame_time_usec = 0;
 
 unsigned int fps_frames = 0;
 struct timeval fps_start = {0,0};
+
+float bright=.5;
+bool lines=false;
 
 enum bayer_order {
 	//Carefully ordered so that an hflip is ^1,
@@ -252,9 +255,22 @@ static void check_real(const char *file, int line) {
 #define check() check_real(__FILE__, __LINE__)
 #define C(...) __VA_ARGS__;check();
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_S && action == GLFW_PRESS)
+		bright*=1.1;
+	if (key == GLFW_KEY_A && action == GLFW_PRESS)
+		bright/=1.1;
+	if (key == GLFW_KEY_L && action == GLFW_PRESS)
+		lines=!lines;
+}
+
+
 int initgraph() 
 {
 	glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+
 	if (!glfwInit()) {
 		fprintf(stderr, "glfw init failed\n");
 		return 1;
@@ -267,7 +283,7 @@ int initgraph()
 	glfwMakeContextCurrent(win);
 	GDisplay = glfwGetEGLDisplay();
 
-	C(glEnable(GL_TEXTURE_EXTERNAL_OES));
+	//C(glEnable(GL_TEXTURE_EXTERNAL_OES));
 
 	printf ("win=%p tid=%d\n",win, syscall(SYS_gettid));
 
@@ -296,16 +312,18 @@ int initgraph()
 		fprintf(stderr, "Error in init_resources");
 		return 1;
 	}
+	glfwSetKeyCallback(win, key_callback);
 	
 	assert(!glGetError());
 	
 	return 0;
 }
 
+
 int init_resources() 
 {
-	program = create_program("graph.v.glsl", "graph.f.glsl");
-	//program = create_program("graph.v.glsl", "antialias.f.glsl");
+	//program = create_program("graph.v.glsl", "graph.f.glsl");
+	program = create_program("graph.v.glsl", "antialias.f.glsl");
 	
 	if (program == 0) {
 		fprintf(stderr, "Can't create program");
@@ -355,7 +373,7 @@ int init_resources()
 	glBlendFunc(GL_ONE,GL_ONE);
 	// Create an array with only x values.
 	GLfloat line[NPOINTS];
-
+	glPointSize(2.0);
 	// Fill it in just like an array
 	for (int i = 0; i < NPOINTS; i++) {
 		line[i] = (i - ((NPOINTS-1)/2.0)) / ((NPOINTS-1)/2.0);
@@ -376,13 +394,12 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 {
 	//printf("cb: %08x %d tid=%d\n", buf->data, buf->length, syscall(SYS_gettid));
 	
-	/*
-	{
-		FILE *f=fopen("/tmp/q","wb");
+	FILE *f=fopen("/tmpfs/wavetest", "wb");
+		
+	if(f) {
 		fwrite(buf->data, buf->length, 1, f);
 		fclose(f);
 	}
-	*/
 	
 	assert(!glGetError());
 	
@@ -406,18 +423,16 @@ void graph_set_buffer(MMAL_BUFFER_HEADER_T *buf)
 	int i = 0;
 	int w = 0;
 
-	for (int w=0; w < NWAVES; w++) {
-		for (int i=0; i < NTEXTURES; i++) {
-			//void *ptr = (int8_t *)((buf->data + (262144 / 2) - TEXSIZE) + (i * TEXSIZE)); // + i * TEXSIZE * NWAVES;
+	for (int i=0; i < NTEXTURES; i++) {
+		uint8_t tmptex[TEXSIZE*NWAVES];
+		for (int w=0; w < NWAVES; w++) {
 			void *ptr = (int8_t *)(buf->data + (i * TEXSIZE) + (WAVE_SIZE * (w + 1)) - (WAVE_SIZE / 2) - TEXSIZE);
-			
-			// WAVE_SIZE
-			
-			glBindTexture(GL_TEXTURE_2D, texture_id[i + (w * NTEXTURES)]);
-			check();
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ptr);
-			check();
+			memcpy(&tmptex[w*TEXSIZE], ptr, TEXSIZE);
 		}
+	
+		//glBindTexture(GL_TEXTURE_2D, texture_id[i + (w * NTEXTURES)]);
+		glBindTexture(GL_TEXTURE_2D, texture_id[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, TEXSIZE, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, tmptex);
 	}
 	
 	/* Set texture wrapping mode */
@@ -468,7 +483,6 @@ void graph_display()
 	struct timeval now, delta;
 
 	assert(!glGetError());
-	
 	// Sum frame times together and print estimated fps every hundred frames
 	gettimeofday (&now, NULL);
 	timersub (&now, &fps_start, &delta);
@@ -476,8 +490,8 @@ void graph_display()
 	frame_time_usec += (delta.tv_sec * 1000000) + delta.tv_usec;
 	fps_frames++;
 	
-	if(fps_frames >= 100) {
-		frame_time_usec /= 100;
+	if(frame_time_usec >= 1000000) {
+		frame_time_usec /= fps_frames;
 		printf("FPS: %.4f (frame time = ~%d us)\n", 1e6 / frame_time_usec, frame_time_usec);
 		
 		fps_frames = 0;
@@ -514,24 +528,23 @@ void graph_display()
 	glVertexAttribPointer(attribute_coord1d, 1, GL_FLOAT, GL_FALSE, 0, 0);
 	check();
 
-	float scale = 0.2f; // 16./NWAVES/2;
+	float scale = bright/NWAVES/2;
 	
 	
-	//glUniform1f(uniform_wavenum, 0 /*(2*i+1.0)/(2*NWAVES)*/);
 	//check();
 	glUniform1f(uniform_nxtiles, NTEXTURES);
 	check();
-	glUniform4f(uniform_color, 1*scale,4*scale,1*scale,1);
+	//glUniform4f(uniform_color, 1*scale,4*scale,1*scale);
+	glUniform3f(uniform_color, 1*scale,4*scale,1*scale);
 	check();
 			
-	for (int i=0; i<NWAVES; i++) {
-		for (int j=0; j<NTEXTURES; j++) {
+	for (int j=0; j<NTEXTURES; j++) {
+		glBindTexture(GL_TEXTURE_2D, texture_id[j]);
+		for (int i=0; i<NWAVES; i++) {
 		//int j=1;
-			glBindTexture(GL_TEXTURE_2D, texture_id[(i * NTEXTURES) + j]);
-			check();
+			glUniform1f(uniform_wavenum, (2*i+1.0)/(2*NWAVES));
 			
 			glUniform1f(uniform_xtile, ((float)j*2-NTEXTURES+1)/NTEXTURES);
-			check();
 			
 			//glUniform1f(uniform_offset_x, offset_x);
 			//glUniform1f(uniform_scale_x, scale_x);
@@ -543,7 +556,7 @@ void graph_display()
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NPOINTS, NWAVES, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, graph+NPOINTS*i);
 			
 			//glDrawArrays(GL_POINTS, 0, NPOINTS);
-			glDrawArrays(GL_LINE_STRIP, 0, NPOINTS);
+			glDrawArrays(lines?GL_LINE_STRIP:GL_POINTS, 0, NPOINTS);
 			//glDrawArrays(GL_TRIANGLES, 0, NPOINTS);
 			check();
 		}
@@ -552,6 +565,7 @@ void graph_display()
 	
 	assert(!glGetError());
 	glfwSwapBuffers(win);
+	glfwPollEvents();
 	//glutSwapBuffers();
 	//glutPostRedisplay();
 }
@@ -560,24 +574,34 @@ int running = 0;
 
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
+	char filename[50];
 	static int count = 0;
 	//printf("Buffer %p returned, data %p, filled %d, offset %d, timestamp %llu, flags %04X, running %d\n", buffer, buffer->data, buffer->length, buffer->offset, buffer->pts, buffer->flags, running);
 
-	FILE *file;
-	char filename[32];
 		
 	//RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)port->userdata;
 
 #if 1
 	if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 	{
-		//sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
 		//printf("Filename: %s\n", filename);
+		
+		if(packet_idx % 100 == 0) {
+			sprintf(filename, "rxtest/rxpkt_%04d.bin", packet_idx);
+			
+			FILE *file = fopen(filename, "wb");
+			if(file) {
+				fwrite(buffer->data, buffer->length, 1, file);
+				fclose(file);
+			}
+			
+			printf("Buffer %p written out %d\n", buffer, packet_idx);
+		}
 			
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		shared_buf = *buffer;
 		//printf ("shared_buf: %p -> %p %d\n", &shared_buf, shared_buf.data, shared_buf.length);
-		got_frame = 1;
+		//got_frame = 1;
 		vcos_mutex_unlock(&mutex);
 			
 		packet_idx++;
@@ -653,6 +677,64 @@ void signal_abort(int i)
 {
 	aborted = 1;
 	write(2, "aborting\n", 9);
+}
+
+static void print_rx_config (MMAL_PARAMETER_CAMERA_RX_CONFIG_T *r) {
+#define NAME(n,names) ((n>=0 && n<(sizeof names/sizeof names[0]) ? names[n] : "???"))
+	const char *decode[] = {
+		"MMAL_CAMERA_RX_CONFIG_DECODE_NONE",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO10",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM7TO10",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM6TO10",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO12",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM7TO12",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM6TO12",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM10TO14",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO14",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM12TO16",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM10TO16",
+		"MMAL_CAMERA_RX_CONFIG_DECODE_DPCM8TO16",
+	}, *encode[] = {
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_NONE",
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_DPCM10TO8",
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_DPCM12TO8",
+		"MMAL_CAMERA_RX_CONFIG_ENCODE_DPCM14TO8",
+	}, *unpack[] = {
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_NONE",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_6",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_7",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_8",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_10",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_12",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_14",
+		"MMAL_CAMERA_RX_CONFIG_UNPACK_16",
+	}, *pack[] = {
+		"MMAL_CAMERA_RX_CONFIG_PACK_NONE",
+		"MMAL_CAMERA_RX_CONFIG_PACK_8",
+		"MMAL_CAMERA_RX_CONFIG_PACK_10",
+		"MMAL_CAMERA_RX_CONFIG_PACK_12",
+		"MMAL_CAMERA_RX_CONFIG_PACK_14",
+		"MMAL_CAMERA_RX_CONFIG_PACK_16",
+		"MMAL_CAMERA_RX_CONFIG_PACK_RAW10",
+		"MMAL_CAMERA_RX_CONFIG_PACK_RAW12",
+	};
+	printf ("rx config:\n"
+		"decode: %s\n"
+		"encode: %s\n"
+		"pack: %s\n"
+		"unpack: %s\n"
+		"data_lanes: %u\n"
+		"encode_block_length: %u\n"
+		"embedded_data_lines: %u\n"
+		"image_id: %u\n",
+		NAME(r->decode, decode),
+		NAME(r->encode, encode),
+		NAME(r->pack, pack),
+		NAME(r->unpack, unpack),
+		r->data_lanes,
+		r->encode_block_length,
+		r->embedded_data_lines,
+		r->image_id);
 }
 
 int main(int argc, char** argv) 
@@ -793,6 +875,7 @@ int main(int argc, char** argv)
 	
 	printf("Set data_lanes to %d, image_id to 0x%02x\n", rx_cfg.data_lanes, rx_cfg.image_id);
 	
+	print_rx_config(&rx_cfg);
 	status = mmal_port_parameter_set(output, &rx_cfg.hdr);
 	if (status != MMAL_SUCCESS)
 	{
@@ -926,7 +1009,7 @@ int main(int argc, char** argv)
 		while (vcos_mutex_lock(&mutex) != VCOS_SUCCESS);
 		if (got_frame) {
 			graph_set_buffer(&shared_buf);
-			got_frame = 0;
+			//got_frame = 0;
 			vcos_mutex_unlock(&mutex);
 			//printf("got frame %d\n", frame_counter++);
 			graph_display();
@@ -934,7 +1017,7 @@ int main(int argc, char** argv)
 			vcos_mutex_unlock(&mutex);
 		}
 		//usleep (1000000.0/cfg.fps);
-		//usleep (1000);
+		usleep (1000);
 	} while (!aborted);
 	
 	running = 0;
