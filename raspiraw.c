@@ -969,7 +969,7 @@ int main(int argc, char** argv)
 		goto component_disable;
 	}
 
-	output->buffer_size = 2048*2048; //262144; //output->buffer_size_recommended;
+	output->buffer_size = 262144; //output->buffer_size_recommended;
 	output->buffer_num = 4; //output->buffer_num_recommended;
 
 	status = mmal_port_parameter_set_boolean(output, MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE);
