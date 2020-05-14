@@ -955,12 +955,13 @@ int main(int argc, char** argv)
 	output->format->es->video.width = VCOS_ALIGN_UP(sensor_mode->width, 16);
 	output->format->es->video.height = VCOS_ALIGN_UP(sensor_mode->height, 16);
 	output->format->encoding = encoding;
-	printf ("cw %d ch %d w %d h %d enc %08x\n", 
+	printf ("cw %d ch %d w %d h %d enc %08x minsize %d\n", 
 		output->format->es->video.crop.width,
 		output->format->es->video.crop.height,
 		output->format->es->video.width,
 		output->format->es->video.height,
-		output->format->encoding);
+		output->format->encoding,
+		output->buffer_size_min);
 
 	status = mmal_port_format_commit(output);
 	if (status != MMAL_SUCCESS)
